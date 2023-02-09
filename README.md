@@ -1,10 +1,8 @@
-# SMO-Exlaunch-Base
+# MP1R-Exlaunch-Base
 
-A base repository using exlaunch-cmake that contains code for modifying Super Mario Odyssey 1.0.
+A base repository using exlaunch-cmake that contains code for modifying Metroid Prime 1: Remastered.
 
-# Notes
-
-Currently untested
+Contains barebones code necessary for modifying game code, as well as a working implementation of imgui.
 
 # Credits
 
