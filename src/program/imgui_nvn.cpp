@@ -5,10 +5,15 @@
 #include "logger/Logger.hpp"
 #include "helpers/InputHelper.h"
 #include "nvn_CppFuncPtrImpl.h"
+#include "nn/fs.h"
 
 nvn::Device *nvnDevice;
 nvn::Queue *nvnQueue;
 nvn::CommandBuffer *nvnCmdBuf;
+
+static nvn::CommandBuffer* __cmdBuf = nullptr;
+static const nvn::TexturePool* __texturePool = nullptr;
+static const nvn::SamplerPool* __samplerPool = nullptr;
 
 nvn::DeviceGetProcAddressFunc tempGetProcAddressFuncPtr;
 
@@ -19,13 +24,29 @@ nvn::QueuePresentTextureFunc tempPresentTexFunc;
 
 nvn::CommandBufferSetViewportFunc tempSetViewportFunc;
 
+nvn::CommandBufferSetTexturePoolFunc tempCommandSetTexturePoolFunc;
+nvn::CommandBufferSetSamplerPoolFunc tempCommandSetSamplerPoolFunc;
+
 bool hasInitImGui = false;
 
 namespace nvnImGui {
     ImVector<ProcDrawFunc> drawQueue;
 }
 
-#define IMGUI_USEEXAMPLE_DRAW false
+#define IMGUI_USEEXAMPLE_DRAW true
+
+void setTexturePool(nvn::CommandBuffer* cmdBuf, const nvn::TexturePool* pool) {
+    __cmdBuf = cmdBuf;
+    __texturePool = pool;
+
+    tempCommandSetTexturePoolFunc(cmdBuf, pool);
+}
+
+void setSamplerPool(nvn::CommandBuffer* cmdBuf, const nvn::SamplerPool* pool) {
+    __samplerPool = pool;
+
+    tempCommandSetSamplerPoolFunc(cmdBuf, pool);
+}
 
 void setViewport(nvn::CommandBuffer *cmdBuf, int x, int y, int w, int h) {
     tempSetViewportFunc(cmdBuf, x, y, w, h);
@@ -36,8 +57,26 @@ void setViewport(nvn::CommandBuffer *cmdBuf, int x, int y, int w, int h) {
 
 void presentTexture(nvn::Queue *queue, nvn::Window *window, int texIndex) {
 
+    // save state; modified by procDraw
+    auto* buf = __cmdBuf;
+    auto* pool = __texturePool;
+    auto* samplerPool = __samplerPool;
+
+    // end previous recording (we dont need to submit)
+    buf->EndRecording();
+
     if (hasInitImGui)
         nvnImGui::procDraw();
+
+    // restore state
+    buf->BeginRecording();
+    setTexturePool(buf, pool);
+    setSamplerPool(buf, samplerPool);
+    auto handle = buf->EndRecording();
+    queue->SubmitCommands(1, &handle);
+
+    // start new recording back up (for next frame)
+    buf->BeginRecording();
 
     tempPresentTexFunc(queue, window, texIndex);
 }
@@ -82,6 +121,15 @@ nvn::GenericFuncPtrFunc getProc(nvn::Device *device, const char *procName) {
     } else if (strcmp(procName, "nvnQueuePresentTexture") == 0) {
         tempPresentTexFunc = (nvn::QueuePresentTextureFunc) ptr;
         return (nvn::GenericFuncPtrFunc) &presentTexture;
+    } else if (strcmp(procName, "nvnDeviceInitialize") == 0) {
+        tempDeviceInitFuncPtr = (nvn::DeviceInitializeFunc) ptr;
+        return (nvn::GenericFuncPtrFunc) &deviceInit;
+    } else if (strcmp(procName, "nvnCommandBufferSetSamplerPool") == 0) {
+        tempCommandSetSamplerPoolFunc = (nvn::CommandBufferSetSamplerPoolFunc)ptr;
+        return (nvn::GenericFuncPtrFunc) &setSamplerPool;
+    } else if (strcmp(procName, "nvnCommandBufferSetTexturePool") == 0) {
+        tempCommandSetTexturePoolFunc = (nvn::CommandBufferSetTexturePoolFunc)ptr;
+        return (nvn::GenericFuncPtrFunc) &setTexturePool;
     }
 
     return ptr;
@@ -140,6 +188,8 @@ HOOK_DEFINE_TRAMPOLINE(NvnBootstrapHook) {
     static void *Callback(const char *funcName) {
 
         void *result = Orig(funcName);
+
+        Logger::log("Getting Proc from Bootstrap: %s\n", funcName);
 
         if (strcmp(funcName, "nvnDeviceInitialize") == 0) {
             tempDeviceInitFuncPtr = (nvn::DeviceInitializeFunc) result;
@@ -212,6 +262,13 @@ bool nvnImGui::InitImGui() {
                 .cmdBuf = nvnCmdBuf
         };
 
+        Logger::log("Mounting SD Card.\n");
+        if(nn::fs::MountSdCardForDebug("sd").isFailure()) {
+            Logger::log("Unable to Mount SD!\n");
+            return false;
+        }
+        Logger::log("Initializing Backend.\n");
+
         ImguiNvnBackend::InitBackend(initInfo);
 
         InputHelper::initKBM();
@@ -220,16 +277,7 @@ bool nvnImGui::InitImGui() {
 
 
 #if IMGUI_USEEXAMPLE_DRAW
-        IMGUINVN_DRAWFUNC(
-                ImGui::ShowDemoWindow();
-            //    ImGui::ShowStyleSelector("Style Selector");
-            //        ImGui::ShowMetricsWindow();
-            //        ImGui::ShowDebugLogWindow();
-            //        ImGui::ShowStackToolWindow();
-            //        ImGui::ShowAboutWindow();
-            //        ImGui::ShowFontSelector("Font Selector");
-            //        ImGui::ShowUserGuide();
-        )
+        addDrawFunc([]() {ImGui::ShowDemoWindow();});
 #endif
 
         return true;

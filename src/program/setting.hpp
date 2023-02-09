@@ -2,8 +2,8 @@
 
 #include "common.hpp"
 
-#define EXL_MODULE_NAME "smo-exlaunch"
-#define EXL_MODULE_NAME_LEN 12
+#define EXL_MODULE_NAME "mp1r-exlaunch"
+#define EXL_MODULE_NAME_LEN 13
 
 #define EXL_DEBUG
 #define EXL_USE_FAKEHEAP

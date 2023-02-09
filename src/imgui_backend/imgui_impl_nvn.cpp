@@ -214,7 +214,7 @@ namespace ImguiNvnBackend {
 
         auto bd = getBackendData();
 
-        if (ImguiShaderCompiler::CheckIsValidVersion(bd->device)) {
+        if (false) {
             Logger::log("GLSLC compiler can be used!\n");
 
             ImguiShaderCompiler::InitializeCompiler();

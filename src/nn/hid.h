@@ -5,7 +5,6 @@
 
 #pragma once
 
-#include <gfx/seadColor.h>
 #include <nx/types.h>
 #include <nn/util.h>
 
@@ -324,7 +323,7 @@ namespace nn {
             bool mPermitJoyconDual;
             bool mSingleMode;
             bool mUseColors;
-            sead::Color4u8 mColors[4];
+            u8 mIdentificationColors[4];
             u8 mUsingControllerNames;
             char mControllerNames[4][0x81];
         };

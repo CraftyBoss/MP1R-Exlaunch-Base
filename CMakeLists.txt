@@ -14,9 +14,9 @@ if (LOGGER_IP)
 endif ()
 
 ## Title Id
-set(TITLE_ID 0100000000010000)
+set(TITLE_ID 010012101468C000)
 set(CONFIG_TITLE_ID 0x${TITLE_ID})
-add_compile_definitions(EXL_PROGRAM_ID=${CONFIG_TITLE_ID} NNSDK=1 IMGUI_USER_CONFIG="imgui_backend/nvn_imgui_config.h")
+add_compile_definitions(EXL_PROGRAM_ID=${CONFIG_TITLE_ID} IMGUI_USER_CONFIG="imgui_backend/nvn_imgui_config.h")
 configure_file(${CMAKE_CURRENT_SOURCE_DIR}/module/subsdk9.json.template ${CMAKE_CURRENT_BINARY_DIR}/subsdk9.json)
 
 ## Project sources
@@ -24,9 +24,10 @@ include_directories(${PROJECT_SOURCE_DIR}/src/lib)
 include_directories(${PROJECT_SOURCE_DIR}/src/nvn)
 include_directories(${PROJECT_SOURCE_DIR}/src/nn)
 include_directories(${PROJECT_SOURCE_DIR}/src/program)
-include_directories(${PROJECT_SOURCE_DIR}/src/sead)
+
 include_directories(${PROJECT_SOURCE_DIR}/src)
 include_directories(${PROJECT_SOURCE_DIR}/imgui)
+
 file(GLOB_RECURSE SOURCES_ASM ${PROJECT_SOURCE_DIR}/src/*.s)
 file(GLOB_RECURSE SOURCES_H ${PROJECT_SOURCE_DIR}/src/*.h ${PROJECT_SOURCE_DIR}/src/*.hpp)
 file(GLOB_RECURSE SOURCES_CXX ${PROJECT_SOURCE_DIR}/src/*.cpp ${PROJECT_SOURCE_DIR}/src/*.c)
@@ -61,7 +62,7 @@ set_target_properties(subsdk9 PROPERTIES LINK_FLAGS "-specs ${CMAKE_BINARY_DIR}/
 add_custom_target(subsdk9_meta DEPENDS create_npdm subsdk9_nso)
 if (FTP_IP)
   ## Upload to target switch
-  add_custom_command(TARGET subsdk9_meta POST_BUILD COMMAND ncftpput -u crafty -p boss -P 5000 ${FTP_IP} /atmosphere/contents/${TITLE_ID}/exefs ${CMAKE_BINARY_DIR}/main.npdm ${CMAKE_BINARY_DIR}/subsdk9)
+  add_custom_command(TARGET subsdk9_meta POST_BUILD COMMAND ncftpput -u crafty -p boss -P 5000 -m ${FTP_IP} /atmosphere/contents/${TITLE_ID}/exefs ${CMAKE_BINARY_DIR}/main.npdm ${CMAKE_BINARY_DIR}/subsdk9)
 endif()
 
 if(RYU_PATH)

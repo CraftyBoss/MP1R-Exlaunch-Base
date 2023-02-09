@@ -1,6 +1,5 @@
 #pragma once
 
-#include "sead/heap/seadDisposer.h"
 #include "nn/result.h"
 
 enum class LoggerState {
