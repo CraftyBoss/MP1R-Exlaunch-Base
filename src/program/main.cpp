@@ -9,12 +9,18 @@
 
 #include "ExceptionHandler.h"
 
+#include "CGame/CGameState.h"
+
 #define IMGUI_ENABLED true
 
 void drawDebugWindow() {
 
     ImGui::Begin("Game Debug Window");
-    ImGui::SetWindowSize(ImVec2(500, 400), ImGuiCond_FirstUseEver);
+    ImGui::SetWindowSize(ImVec2(200, 100), ImGuiCond_FirstUseEver);
+
+    if(ImGui::CollapsingHeader("General Game Toggles")) {
+        ImGui::Checkbox("Toggle Skippable Cutscene Override", &CGameState::mCinematicForceSkippableOverride);
+    }
 
     ImGui::End();
 }

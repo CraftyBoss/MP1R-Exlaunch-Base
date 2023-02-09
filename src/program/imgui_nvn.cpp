@@ -21,8 +21,7 @@ nvn::CommandBufferInitializeFunc tempBufferInitFuncPtr;
 nvn::DeviceInitializeFunc tempDeviceInitFuncPtr;
 nvn::QueueInitializeFunc tempQueueInitFuncPtr;
 nvn::QueuePresentTextureFunc tempPresentTexFunc;
-
-nvn::CommandBufferSetViewportFunc tempSetViewportFunc;
+nvn::WindowSetCropFunc tempSetCropFunc;
 
 nvn::CommandBufferSetTexturePoolFunc tempCommandSetTexturePoolFunc;
 nvn::CommandBufferSetSamplerPoolFunc tempCommandSetSamplerPoolFunc;
@@ -33,7 +32,7 @@ namespace nvnImGui {
     ImVector<ProcDrawFunc> drawQueue;
 }
 
-#define IMGUI_USEEXAMPLE_DRAW true
+#define IMGUI_USEEXAMPLE_DRAW false
 
 void setTexturePool(nvn::CommandBuffer* cmdBuf, const nvn::TexturePool* pool) {
     __cmdBuf = cmdBuf;
@@ -48,8 +47,11 @@ void setSamplerPool(nvn::CommandBuffer* cmdBuf, const nvn::SamplerPool* pool) {
     tempCommandSetSamplerPoolFunc(cmdBuf, pool);
 }
 
-void setViewport(nvn::CommandBuffer *cmdBuf, int x, int y, int w, int h) {
-    tempSetViewportFunc(cmdBuf, x, y, w, h);
+void setCrop(nvn::Window *window, int x, int y, int w, int h) {
+
+    Logger::log("Window Crop: x: %d y: %d w: %d h: %d\n", x, y, w, h);
+
+    tempSetCropFunc(window, x, y, w, h);
 
     if (hasInitImGui)
         ImGui::GetIO().DisplaySize = ImVec2(w - x, h - y);
@@ -115,9 +117,6 @@ nvn::GenericFuncPtrFunc getProc(nvn::Device *device, const char *procName) {
     } else if (strcmp(procName, "nvnCommandBufferInitialize") == 0) {
         tempBufferInitFuncPtr = (nvn::CommandBufferInitializeFunc) ptr;
         return (nvn::GenericFuncPtrFunc) &cmdBufInit;
-    } else if (strcmp(procName, "nvnCommandBufferSetViewport") == 0) {
-        tempSetViewportFunc = (nvn::CommandBufferSetViewportFunc) ptr;
-        return (nvn::GenericFuncPtrFunc) &setViewport;
     } else if (strcmp(procName, "nvnQueuePresentTexture") == 0) {
         tempPresentTexFunc = (nvn::QueuePresentTextureFunc) ptr;
         return (nvn::GenericFuncPtrFunc) &presentTexture;
@@ -130,6 +129,9 @@ nvn::GenericFuncPtrFunc getProc(nvn::Device *device, const char *procName) {
     } else if (strcmp(procName, "nvnCommandBufferSetTexturePool") == 0) {
         tempCommandSetTexturePoolFunc = (nvn::CommandBufferSetTexturePoolFunc)ptr;
         return (nvn::GenericFuncPtrFunc) &setTexturePool;
+    } else if (strcmp(procName, "nvnWindowSetCrop") == 0) {
+        tempSetCropFunc = (nvn::WindowSetCropFunc)ptr;
+        return (nvn::GenericFuncPtrFunc) &setCrop;
     }
 
     return ptr;

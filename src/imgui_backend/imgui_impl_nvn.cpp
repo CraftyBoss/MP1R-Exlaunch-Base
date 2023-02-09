@@ -16,12 +16,31 @@
 typedef float Matrix44f[4][4];
 
 // orthographic matrix used for shader
-static const Matrix44f projMatrix = {
-        {0.001563f, 0.0f,       0.0f,  0.0f},
-        {0.0f,      -0.002778f, 0.0f,  0.0f},
-        {0.0f,      0.0f,       -0.5f, 0.0f},
-        {-1.0f,     1.0f,       0.5f,  1.0f}
-};
+static Matrix44f projMatrix = {};
+
+// orthographic projection matrix calc from glm
+void orthoRH_ZO(Matrix44f &Result, float left, float right, float bottom, float top, float zNear, float zFar) {
+
+    Result[0][0] = static_cast<float>(2) / (right - left);
+    Result[0][1] = 0.0f;
+    Result[0][2] = 0.0f;
+    Result[0][3] = 0.0f;
+
+    Result[1][0] = 0.0f;
+    Result[1][1] = static_cast<float>(2) / (top - bottom);
+    Result[1][2] = 0.0f;
+    Result[1][3] = 0.0f;
+
+    Result[2][0] = 0.0f;
+    Result[2][1] = 0.0f;
+    Result[2][2] = - static_cast<float>(1) / (zFar - zNear);
+    Result[2][3] = 0.0f;
+
+    Result[3][0] = - (right + left) / (right - left);
+    Result[3][1] = - (top + bottom) / (top - bottom);
+    Result[3][2] = - zNear / (zFar - zNear);
+    Result[3][3] = 1.0f;
+}
 
 namespace ImguiNvnBackend {
 
@@ -410,7 +429,11 @@ namespace ImguiNvnBackend {
         io.ConfigFlags |= ImGuiConfigFlags_NavEnableGamepad;
         io.BackendFlags |= ImGuiBackendFlags_HasGamepad;
         io.BackendFlags |= ImGuiBackendFlags_RendererHasVtxOffset;
+
         io.DisplaySize = ImVec2(1600, 900); // default size
+
+        // calculate ortho matrix
+        orthoRH_ZO(projMatrix, 0.0f, io.DisplaySize.x, io.DisplaySize.y, 0.0f, -1.0f, 1.0f);
 
         auto *bd = IM_NEW(NvnBackendData)();
         io.BackendRendererUserData = (void *) bd;
@@ -640,15 +663,16 @@ namespace ImguiNvnBackend {
 
             for (auto cmd: cmdList->CmdBuffer) {
 
-                // im not exactly sure this scaling is a good solution,
-                // for some reason imgui clipping coords are relative to 720p instead of whatever I set for disp size.
-                ImVec2 origRes(1280.0f, 720.0f);
-                ImVec2 newRes = io.DisplaySize; // (1600.0f, 900.0f);
 
-                ImVec4 clipRect = ImVec4((cmd.ClipRect.x / origRes.x) * newRes.x,
-                                         (cmd.ClipRect.y / origRes.y) * newRes.y,
-                                         (cmd.ClipRect.z / origRes.x) * newRes.x,
-                                         (cmd.ClipRect.w / origRes.y) * newRes.y);
+//                ImVec2 origRes(1280.0f, 720.0f);
+//                ImVec2 newRes = io.DisplaySize; // (1600.0f, 900.0f);
+
+                // clipping seems to be a bit more broken here than in my other repo, not exactly sure what's changed, but it's disabled for now.
+
+                ImVec4 clipRect = ImVec4(cmd.ClipRect.x,
+                                         cmd.ClipRect.y,
+                                         cmd.ClipRect.z,
+                                         cmd.ClipRect.w);
 
                 ImVec2 clip_min(clipRect.x, clipRect.y);
                 ImVec2 clip_max(clipRect.z, clipRect.w);
@@ -657,8 +681,10 @@ namespace ImguiNvnBackend {
                 if (clip_max.x <= clip_min.x || clip_max.y <= clip_min.y)
                     continue;
 
-                bd->cmdBuf->SetScissor((int) clip_min.x, (int) clip_min.y,
-                                       (int) clip_size.x, (int) clip_size.y);
+                bd->cmdBuf->SetViewport(0,0, io.DisplaySize.x, io.DisplaySize.y);
+//                bd->cmdBuf->SetScissor((int) clip_min.x, (int) clip_min.y,
+//                                       (int) clip_size.x, (int) clip_size.y);
+                bd->cmdBuf->SetScissor(0,0, io.DisplaySize.x, io.DisplaySize.y);
 
                 // get texture ID from the command
                 nvn::TextureHandle TexID = *(nvn::TextureHandle *) cmd.GetTexID();
